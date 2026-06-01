@@ -1,23 +1,196 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import './LoginPage.css';
+import type { CredentialResponse } from '@react-oauth/google';
 
-const LoginPage: React.FC = () => {
-  const handleSuccess = (credentialResponse: any) => {
-    console.log('Google login success', credentialResponse);
-    // TODO: store token, set auth state, redirect to dashboard
+interface LoginPageProps {
+  onLoginSuccess: (token: string) => void;
+}
+
+const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const handleLocalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isSignUp) {
+        if (!fullName.trim() || !username.trim() || !password.trim()) {
+          alert('Please fill out all fields.');
+          return;
+        }
+        if (password !== confirmPassword) {
+          alert('Passwords do not match.');
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/api/auth/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fullName,
+            username,
+            password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || 'Signup failed. Please try again.');
+          return;
+        }
+
+        alert('Account created successfully! Logging you in...');
+        onLoginSuccess(data.token);
+      } else {
+        if (!username.trim() || !password.trim()) {
+          alert('Please fill out both fields.');
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username,
+            password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || 'Invalid credentials.');
+          return;
+        }
+
+        onLoginSuccess(data.token);
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      alert('Could not connect to the backend server. Please make sure the backend is running.');
+    }
   };
 
-  const handleError = () => {
+  const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
+    console.log('Google login success', credentialResponse);
+    if (credentialResponse.credential) {
+      onLoginSuccess(credentialResponse.credential);
+    }
+  };
+
+  const handleGoogleError = () => {
     console.error('Google login failed');
   };
 
   return (
-    <section className="login-page glass">
-      <h2 className="login-title">Welcome to Mail‑Alert Agent</h2>
-      <GoogleLogin onSuccess={handleSuccess} onError={handleError} />
-    </section>
+    <div className="auth-page animate-fade-in">
+      <section className="auth-card glass-panel">
+        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>✉️</div>
+        <h2 className="login-title" style={{ marginBottom: '1.5rem' }}>
+          {isSignUp ? 'Create Your Account' : 'Welcome to Mail‑Alert'}
+        </h2>
+        
+        <form className="auth-form" onSubmit={handleLocalSubmit}>
+          {isSignUp && (
+            <div className="form-group animate-fade-in">
+              <label htmlFor="fullName">Full Name</label>
+              <input
+                type="text"
+                id="fullName"
+                className="form-input"
+                placeholder="John Doe"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="username">Username or Email</label>
+            <input
+              type="text"
+              id="username"
+              className="form-input"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              className="form-input"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          {isSignUp && (
+            <div className="form-group animate-fade-in">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                className="form-input"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }}>
+            {isSignUp ? 'Create Account' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="auth-divider">or</div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+          <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
+        </div>
+
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+          <span 
+            style={{ 
+              color: 'var(--accent-primary)', 
+              cursor: 'pointer', 
+              textDecoration: 'underline',
+              fontWeight: 500
+            }}
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              // Clear fields on toggle
+              setFullName('');
+              setUsername('');
+              setPassword('');
+              setConfirmPassword('');
+            }}
+          >
+            {isSignUp ? 'Sign In' : 'Create one'}
+          </span>
+        </p>
+      </section>
+    </div>
   );
 };
 
 export default LoginPage;
+

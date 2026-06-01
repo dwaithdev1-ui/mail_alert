@@ -1,8 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import './Sidebar.css';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onLogout: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
   return (
     <nav className="sidebar glass">
       <ul>
@@ -22,7 +25,7 @@ const Sidebar: React.FC = () => {
           </NavLink>
         </li>
         <li>
-          <button className="logoutBtn" onClick={() => alert('Logout placeholder')}>Logout</button>
+          <button className="logoutBtn" onClick={onLogout}>Logout</button>
         </li>
       </ul>
     </nav>
