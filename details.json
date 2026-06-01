@@ -1,0 +1,140 @@
+{
+  "project": "Principal Alert & Meeting Management System",
+
+  "base_url": "https://api.collegeadmin.com/api",
+
+  "authentication": {
+    "type": "Bearer Token",
+    "login_endpoint": "/auth/login"
+  },
+
+  "endpoints": [
+
+    {
+      "name": "Login",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "request": {
+        "email": "principal@gmail.com",
+        "password": "123456"
+      },
+      "response": {
+        "success": true,
+        "token": "jwt_token_here",
+        "user": {
+          "id": 1,
+          "name": "Principal",
+          "role": "admin"
+        }
+      }
+    },
+
+    {
+      "name": "Get All Emails",
+      "method": "GET",
+      "endpoint": "/emails",
+      "headers": {
+        "Authorization": "Bearer jwt_token_here"
+      },
+      "response": [
+        {
+          "mail_id": 101,
+          "hod_name": "Dr. Kumar",
+          "department": "CSE",
+          "subject": "Project Review Meeting",
+          "message": "Meeting scheduled tomorrow",
+          "date": "2026-05-29",
+          "time": "10:00 AM"
+        }
+      ]
+    },
+
+    {
+      "name": "Create Calendar Event",
+      "method": "POST",
+      "endpoint": "/calendar/create",
+      "headers": {
+        "Authorization": "Bearer jwt_token_here"
+      },
+      "request": {
+        "event_name": "Project Review Meeting",
+        "department": "CSE",
+        "date": "2026-05-30",
+        "time": "10:00 AM"
+      },
+      "response": {
+        "success": true,
+        "message": "Event added to calendar"
+      }
+    },
+
+    {
+      "name": "Get Calendar Events",
+      "method": "GET",
+      "endpoint": "/calendar/events",
+      "headers": {
+        "Authorization": "Bearer jwt_token_here"
+      },
+      "response": [
+        {
+          "event_id": 1,
+          "event_name": "Project Review Meeting",
+          "date": "2026-05-30",
+          "time": "10:00 AM"
+        }
+      ]
+    },
+
+    {
+      "name": "Send Alert Notification",
+      "method": "POST",
+      "endpoint": "/alerts/send",
+      "headers": {
+        "Authorization": "Bearer jwt_token_here"
+      },
+      "request": {
+        "principal_id": 1,
+        "message": "Meeting starts in 15 minutes"
+      },
+      "response": {
+        "success": true,
+        "message": "Alert sent successfully"
+      }
+    },
+
+    {
+      "name": "Get Notifications",
+      "method": "GET",
+      "endpoint": "/notifications",
+      "headers": {
+        "Authorization": "Bearer jwt_token_here"
+      },
+      "response": [
+        {
+          "notification_id": 1,
+          "message": "New meeting scheduled",
+          "status": "unread",
+          "created_at": "2026-05-29T09:30:00"
+        }
+      ]
+    },
+
+    {
+      "name": "Detect Meeting Conflict",
+      "method": "POST",
+      "endpoint": "/conflicts/check",
+      "headers": {
+        "Authorization": "Bearer jwt_token_here"
+      },
+      "request": {
+        "date": "2026-05-30",
+        "time": "10:00 AM"
+      },
+      "response": {
+        "conflict": true,
+        "message": "Another meeting already exists at this time"
+      }
+    }
+
+  ]
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Agent – Mail Alerts</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Google Font for premium look -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+  <header class="header">
+    <h1>📧 Mail Alert Personal Agent</h1>
+    <nav>
+      <button id="loginBtn" class="btn btn-primary">Sign in with Google</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Example email card – in real app this will be generated dynamically -->
+    <section class="email-card glass">
+      <h4>Project Review Meeting</h4>
+      <p class="subject"><strong>Subject:</strong> Project Review Meeting</p>
+      <p class="meeting-time"><strong>Time:</strong> Tomorrow 10:00 AM</p>
+      <button class="btn btn-action" onclick="addToCalendar('Project Review Meeting', '2026-06-02T10:00:00')">
+        Add to Google Calendar
+      </button>
+    </section>
+
+    <section class="email-card glass">
+      <h4>ECE Department Update</h4>
+      <p class="subject"><strong>Subject:</strong> Weekly Lab Schedule</p>
+      <p class="meeting-time"><strong>Time:</strong> Thursday 2:30 PM</p>
+      <button class="btn btn-action" onclick="addToCalendar('ECE Department Update', '2026-06-04T14:30:00')">
+        Add to Google Calendar
+      </button>
+    </section>
+  </main>
+
+  <!-- Toast notification container -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // Simple toast implementation (re‑uses the existing showToast logic)
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Placeholder for Google Calendar integration – will be replaced by real API calls.
+    function addToCalendar(eventTitle, isoDate) {
+      console.log('Add to calendar:', eventTitle, isoDate);
+      showToast(`Added "${eventTitle}" to your calendar`);
+    }
+
+    // Dummy login click – replace with real OAuth flow.
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      showToast('Login flow not wired yet – implement Google OAuth');
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,45 @@
+:root {
+  --bg-primary: #0d0d0d;
+  --bg-card: rgba(255, 255, 255, 0.08);
+  --text-primary: #f5f5f5;
+  --accent: #4fd1c5;
+  --glass-blur: 12px;
+  --radius: 12px;
+  --spacing: 1rem;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.glass {
+  background: var(--bg-card);
+  backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius);
+}
+
+.btn {
+  padding: var(--spacing);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  transition: transform 0.2s, background 0.3s;
+}
+.btn:hover {
+  transform: translateY(-2px);
+  background: #3ab9a8;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+.content {
+  flex: 1;
+  padding: var(--spacing);
+}
