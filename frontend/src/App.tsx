@@ -4,14 +4,14 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import LoginPage from './pages/LoginPage';
-import Settings from './pages/Settings';
+import HelpDesk from './pages/HelpDesk';
+
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!localStorage.getItem('auth_token');
-  });
+  console.log('App component rendered');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
 
   const handleLoginSuccess = (token: string) => {
     localStorage.setItem('auth_token', token);
@@ -32,7 +32,8 @@ function App() {
             <main className="main-content animate-fade-in">
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/help" element={<HelpDesk />} />
+
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
