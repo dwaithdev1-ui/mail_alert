@@ -88,30 +88,36 @@ p {
 
 .logoutBtn {
   width: 100%;
-  background: transparent;
-  border: none;
-  color: #a8b3cf;
   font-size: 1.1rem;
-  padding: 14px 20px;
-  text-align: left;
+  padding: 14px 24px;
+  text-align: center;
   cursor: pointer;
   border-radius: 12px;
-  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  transition: background 0.3s ease, transform 0.2s ease;
+  border: none;
 }
 
 .logoutBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .logoutBtn:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 .btn-primary {
   background: var(--accent-primary);
   color: #fff;
   box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
 .btn-primary:hover {
