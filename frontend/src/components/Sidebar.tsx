@@ -1,17 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import AlertPort from './AlertPort';
-
-import { meetings } from '../data/meetings';
+import { useCalendarContext } from '../context/CalendarContext';
 
 interface SidebarProps {
   onLogout: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
+  const { events } = useCalendarContext();
+
   return (
     <nav className="sidebar glass">
-      
       <ul>
         <li>
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : undefined)}>
@@ -21,6 +21,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
         <li>
           <NavLink to="/calendar" className={({ isActive }) => (isActive ? 'active' : undefined)}>
             Calendar
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/mail" className={({ isActive }) => (isActive ? 'active' : undefined)}>
+            Meeting Scanner
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/departments" className={({ isActive }) => (isActive ? 'active' : undefined)}>
+            Departments
           </NavLink>
         </li>
         <li>
@@ -34,9 +44,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
           </NavLink>
         </li>
       </ul>
-      
-      <AlertPort meetings={meetings} />
-      <button className="logoutBtn" onClick={onLogout}>Logout</button>
+
+      <div style={{ marginTop: 'auto' }}>
+        <button onClick={onLogout} className="logoutBtn">
+          Disconnect
+        </button>
+      </div>
     </nav>
   );
 };

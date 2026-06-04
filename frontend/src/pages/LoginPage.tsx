@@ -46,6 +46,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
 
         alert('Account created successfully! Logging you in...');
+        if (data.user) {
+          localStorage.setItem('auth_user', JSON.stringify({
+            id: data.user.id,
+            name: data.user.name,
+            username: data.user.email
+          }));
+        }
         onLoginSuccess(data.token);
       } else {
         if (!username.trim() || !password.trim()) {
@@ -71,6 +78,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           return;
         }
 
+        if (data.user) {
+          localStorage.setItem('auth_user', JSON.stringify({
+            id: data.user.id,
+            name: data.user.name,
+            username: data.user.email
+          }));
+        }
         onLoginSuccess(data.token);
       }
     } catch (error) {
@@ -79,10 +93,41 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
-    console.log('Google login success', credentialResponse);
-    if (credentialResponse.credential) {
-      onLoginSuccess(credentialResponse.credential);
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    if (!credentialResponse.credential) return;
+
+    try {
+      // Decode the Google JWT to extract email + name (already verified by Google on the client)
+      const payload = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
+
+      // Register / find this Google user in our own DB so they get a real userId,
+      // can set a site password, and have an editable profile.
+      const response = await fetch('http://localhost:5000/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: payload.email, name: payload.name }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Google login failed. Please try again.');
+        return;
+      }
+
+      if (data.user) {
+        localStorage.setItem('auth_user', JSON.stringify({
+          id: data.user.id,
+          name: data.user.name,
+          username: data.user.email,
+          isGoogleUser: true,
+        }));
+      }
+
+      onLoginSuccess(data.token);
+    } catch (e) {
+      console.error('Google auth error:', e);
+      alert('Could not connect to the backend server. Please make sure the backend is running.');
     }
   };
 
