@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAgent } from '../hooks/useAgent';
+import { useCalendarContext } from '../context/CalendarContext';
+import { cleanAgentResponse } from '../utils/cleanResponse';
 
 /* ── Tool badge chip ────────────────────────────────────────────────────── */
 const TOOL_LABELS: Record<string, string> = {
@@ -11,6 +13,7 @@ const TOOL_LABELS: Record<string, string> = {
   check_conflicts:    'Checked conflicts',
   list_notifications: 'Checked inbox',
   get_briefing:       'Fetched briefing',
+  send_email:         'Sent email',
 };
 
 const ToolBadge: React.FC<{ tool: string }> = ({ tool }) => (
@@ -38,11 +41,18 @@ const TypingDots: React.FC = () => (
   </div>
 );
 
-/* ── Main AgentChat component ───────────────────────────────────────────── */
-const AgentChat: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const SpeechRecognitionAPI =
+  (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+interface AgentChatProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+}
+
+const AgentChat: React.FC<AgentChatProps> = ({ isOpen, setIsOpen }) => {
   const [input, setInput] = useState('');
   const { history, isLoading, error, lastToolsUsed, sendMessage, clearHistory } = useAgent();
+  const { refresh } = useCalendarContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,10 +61,138 @@ const AgentChat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history, isLoading]);
 
+  // Speech Recognition States
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported] = useState(!!SpeechRecognitionAPI);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef(false);
+  const silenceTimerRef = useRef<any>(null);
+
+  // Keep sendMessage reference stable to prevent recreating recognition instance on re-renders
+  const sendMessageRef = useRef(sendMessage);
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  }, [sendMessage]);
+
+  useEffect(() => {
+    if (!SpeechRecognitionAPI) return;
+
+    const rec = new SpeechRecognitionAPI();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+
+    rec.onstart = () => {
+      setIsListening(true);
+      isListeningRef.current = true;
+      setSpeechError(null);
+      setInput('');
+    };
+
+    rec.onresult = (event: any) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      const currentText = (finalTranscript + interimTranscript).trim();
+      setInput(currentText);
+
+      // Reset silence timer on every new transcription chunk
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+
+      if (currentText) {
+        silenceTimerRef.current = setTimeout(() => {
+          rec.stop();
+          sendMessageRef.current(currentText);
+          setInput('');
+        }, 1500); // Wait 1.5 seconds of silence before auto-submitting
+      }
+    };
+
+    rec.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        setSpeechError('Microphone permission denied.');
+      } else if (event.error === 'no-speech') {
+        // quiet timeout
+      } else if (event.error === 'aborted') {
+        // Ignore deliberate aborts during cleanup/stops
+      } else {
+        setSpeechError(`Speech error: ${event.error}`);
+      }
+      setIsListening(false);
+      isListeningRef.current = false;
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+      isListeningRef.current = false;
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+    };
+
+    recognitionRef.current = rec;
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (isLoading) return;
+    if (!recognitionRef.current) return;
+    if (isListeningRef.current) {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      recognitionRef.current.stop();
+      isListeningRef.current = false;
+      setIsListening(false);
+    } else {
+      try {
+        setSpeechError(null);
+        isListeningRef.current = true;
+        setIsListening(true);
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error('Failed to start speech recognition:', err);
+        isListeningRef.current = false;
+        setIsListening(false);
+      }
+    }
+  };
+
   // Focus input when panel opens
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 150);
   }, [isOpen]);
+
+  // Auto-refresh calendar events when agent schedules, cancels, or updates a meeting
+  useEffect(() => {
+    const writeTools = ['create_meeting', 'cancel_meeting', 'update_meeting'];
+    if (lastToolsUsed.some(tool => writeTools.includes(tool))) {
+      refresh();
+    }
+  }, [lastToolsUsed, refresh]);
 
   const handleSend = async () => {
     const msg = input.trim();
@@ -92,47 +230,31 @@ const AgentChat: React.FC = () => {
           0%, 100% { box-shadow: 0 0 0 0 rgba(14,165,233,0.4); }
           50%       { box-shadow: 0 0 0 8px rgba(14,165,233,0); }
         }
+        @keyframes micPulse {
+          0%   { transform: scale(1);   opacity: 1; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
         .agent-msg-user p, .agent-msg-assistant p { margin: 0 0 6px 0; }
         .agent-msg-user p:last-child,
         .agent-msg-assistant p:last-child { margin-bottom: 0; }
       `}</style>
-
-      {/* ── Floating toggle button ── */}
-      <button
-        id="agent-chat-toggle"
-        onClick={() => setIsOpen(o => !o)}
-        title="AI Scheduling Assistant"
-        aria-label="Open AI Assistant"
-        style={{
-          position: 'fixed', bottom: '24px', left: '24px',
-          width: '52px', height: '52px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--accent-primary) 0%, #6366f1 100%)',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.4rem', color: 'white',
-          boxShadow: '0 4px 20px rgba(14,165,233,0.4)',
-          animation: history.length === 0 ? 'agentPulse 2.5s ease-in-out infinite' : 'none',
-          zIndex: 9990,
-          transition: 'transform 0.2s ease',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.1)')}
-        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-      >
-        {isOpen ? '✕' : '✦'}
-      </button>
 
       {/* ── Chat panel ── */}
       {isOpen && (
         <div
           id="agent-chat-panel"
           style={{
-            position: 'fixed', bottom: '88px', left: '24px',
-            width: '360px', height: '520px',
+            position: 'absolute',
+            bottom: '24px',
+            left: 'calc(var(--sidebar-width, 260px) + 24px)',
+            width: '360px',
+            height: 'min(520px, calc(100vh - 88px))',
             background: 'var(--bg-color, #0b0f19)',
             border: '1px solid var(--glass-border)',
             borderRadius: '18px',
             boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-            display: 'flex', flexDirection: 'column',
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
             zIndex: 9990,
             animation: 'agentSlideUp 0.25s ease-out forwards',
@@ -162,21 +284,54 @@ const AgentChat: React.FC = () => {
                 </div>
               </div>
             </div>
-            {history.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {history.length > 0 && (
+                <button
+                  onClick={clearHistory}
+                  disabled={isLoading}
+                  title="Clear conversation"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: isLoading ? 'rgba(255,255,255,0.25)' : 'var(--text-secondary)',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    fontSize: '0.75rem',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    transition: 'color 0.2s',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isLoading) e.currentTarget.style.color = 'var(--danger)';
+                  }}
+                  onMouseLeave={e => {
+                    if (!isLoading) e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  Clear
+                </button>
+              )}
               <button
-                onClick={clearHistory}
-                title="Clear conversation"
+                onClick={() => setIsOpen(false)}
+                title="Hide Assistant"
                 style={{
-                  background: 'none', border: 'none', color: 'var(--text-secondary)',
-                  cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px',
-                  borderRadius: '6px', transition: 'color 0.2s',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'color 0.2s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
               >
-                Clear
+                ✕
               </button>
-            )}
+            </div>
           </div>
 
           {/* Messages area */}
@@ -243,7 +398,7 @@ const AgentChat: React.FC = () => {
                       wordBreak: 'break-word',
                     }}
                   >
-                    {msg.content}
+                    {isUser ? msg.content : cleanAgentResponse(msg.content)}
                   </div>
                   {/* Show tool badges under last assistant message */}
                   {isLastAssistant && lastToolsUsed.length > 0 && (
@@ -280,6 +435,17 @@ const AgentChat: React.FC = () => {
               </div>
             )}
 
+            {/* Speech error banner */}
+            {speechError && (
+              <div style={{
+                padding: '8px 12px', borderRadius: '8px',
+                background: 'rgba(239,68,68,0.1)', color: 'var(--danger)',
+                fontSize: '0.8rem', border: '1px solid rgba(239,68,68,0.2)',
+              }}>
+                🎙️ {speechError}
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -290,6 +456,52 @@ const AgentChat: React.FC = () => {
             display: 'flex', gap: '8px', alignItems: 'center',
             background: 'rgba(0,0,0,0.2)', flexShrink: 0,
           }}>
+            {speechSupported && (
+              <button
+                type="button"
+                onClick={toggleListening}
+                title={isListening ? 'Stop listening' : 'Speak command'}
+                aria-label={isListening ? 'Stop listening' : 'Speak command'}
+                disabled={isLoading}
+                style={{
+                  width: 38, height: 38, borderRadius: '10px', flexShrink: 0,
+                  background: isListening
+                    ? 'rgba(239, 68, 68, 0.2)'
+                    : 'rgba(255, 255, 255, 0.06)',
+                  border: isListening
+                    ? '1px solid rgba(239, 68, 68, 0.4)'
+                    : '1px solid var(--glass-border)',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  color: isListening ? 'var(--danger)' : 'var(--text-secondary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                }}
+                onMouseEnter={e => {
+                  if (!isListening && !isLoading) {
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isListening && !isLoading) {
+                    e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }
+                }}
+              >
+                {isListening && (
+                  <span style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    borderRadius: '10px',
+                    border: '2px solid var(--danger)',
+                    animation: 'micPulse 1.5s infinite',
+                  }} />
+                )}
+                🎙️
+              </button>
+            )}
             <input
               ref={inputRef}
               id="agent-chat-input"
@@ -297,8 +509,8 @@ const AgentChat: React.FC = () => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Ask me anything…"
-              disabled={isLoading}
+              placeholder={isListening ? 'Listening... Speak now' : 'Ask me anything…'}
+              disabled={isLoading || isListening}
               style={{
                 flex: 1,
                 background: 'rgba(255,255,255,0.06)',
@@ -306,9 +518,15 @@ const AgentChat: React.FC = () => {
                 borderRadius: '10px', padding: '9px 14px',
                 color: 'var(--text-primary)', fontSize: '0.875rem',
                 outline: 'none', fontFamily: 'inherit',
-                transition: 'border-color 0.2s',
+                transition: 'all 0.2s ease',
+                cursor: (isLoading || isListening) ? 'not-allowed' : 'text',
+                opacity: (isLoading || isListening) ? 0.6 : 1,
               }}
-              onFocus={e => (e.target.style.borderColor = 'var(--accent-primary)')}
+              onFocus={e => {
+                if (!isLoading && !isListening) {
+                  e.target.style.borderColor = 'var(--accent-primary)';
+                }
+              }}
               onBlur={e => (e.target.style.borderColor = 'var(--glass-border)')}
             />
             <button

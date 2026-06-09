@@ -10,8 +10,6 @@ const ProfilePort: React.FC = () => {
 
   // In a real app, decode token or fetch from backend
   useEffect(() => {
-    // Placeholder data – replace with actual logic
-    const token = localStorage.getItem('auth_token');
     // For demo, we just set static values
     setUser({ fullName: 'John Doe', email: 'john.doe@example.com' });
   }, []);

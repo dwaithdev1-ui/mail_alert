@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { useCalendarContext } from '../context/CalendarContext';
 
 /* ── Reusable primitives ─────────────────────────────────────────────────── */
 
@@ -57,6 +56,8 @@ const ALERT_LABELS: Record<number, string> = {
   15: '15 min', 30: '30 min', 60: '1 hour',
 };
 
+import { useGoogleAuth } from '../context/GoogleAuthContext';
+
 const SECTIONS = [
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'calendar', label: 'Calendar', icon: '📅' },
@@ -68,7 +69,7 @@ const SECTIONS = [
 
 const SettingsPage: React.FC = () => {
   const { settings, updateSettings, resetSettings, savedFlash } = useSettings();
-  const { isConnected, disconnect } = useCalendarContext();
+  const { isConnected, disconnect } = useGoogleAuth();
   const [activeSection, setActiveSection] = useState('notifications');
   const [confirmReset, setConfirmReset] = useState(false);
 

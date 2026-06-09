@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import * as chrono from 'chrono-node';
 import { useGoogleAuth } from './GoogleAuthContext';
 import { detectDepartment } from '../utils/departments';
@@ -20,6 +20,7 @@ export interface GmailContextType {
   isLoading: boolean;
   error: string | null;
   scanEmails: (query?: string) => Promise<void>;
+  sendEmail: (to: string, subject: string, bodyText: string) => Promise<void>;
 }
 
 const GmailContext = createContext<GmailContextType | null>(null);
@@ -44,7 +45,7 @@ function getEmailBody(payload: any): string {
 }
 
 export const GmailProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { accessToken, isConnected, error: authError } = useGoogleAuth();
+  const { accessToken, error: authError } = useGoogleAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [emails, setEmails] = useState<ParsedEmail[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export const GmailProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // 1. Search for messages
       const url = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages');
       url.searchParams.set('q', query);
-      url.searchParams.set('maxResults', '20');
+      url.searchParams.set('maxResults', '100');
 
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -111,7 +112,37 @@ export const GmailProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           const referenceDate = emailDate ? new Date(emailDate) : new Date();
           const parsedResults = chrono.parse(preprocessedText, referenceDate, { forwardDate: true });
           if (parsedResults.length > 0) {
-            extractedDate = parsedResults[0].start.date();
+            const dateRes = parsedResults.find(res => {
+              const start = res.start as any;
+              return 'day' in start.knownValues || 
+                     'month' in start.knownValues || 
+                     'year' in start.knownValues || 
+                     'weekday' in start.knownValues;
+            });
+            
+            const timeRes = parsedResults.find(res => {
+              const start = res.start as any;
+              return 'hour' in start.knownValues || 
+                     'minute' in start.knownValues;
+            });
+
+            if (dateRes && timeRes) {
+              const d = dateRes.start.date();
+              const t = timeRes.start.date();
+              extractedDate = new Date(
+                d.getFullYear(),
+                d.getMonth(),
+                d.getDate(),
+                t.getHours(),
+                t.getMinutes(),
+                t.getSeconds(),
+                t.getMilliseconds()
+              );
+            } else if (timeRes) {
+              extractedDate = timeRes.start.date();
+            } else {
+              extractedDate = parsedResults[0].start.date();
+            }
           }
         } catch (e) {
           console.error("Date parse error", e);
@@ -139,6 +170,39 @@ export const GmailProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [accessToken]);
 
+  const sendEmail = useCallback(async (to: string, subject: string, bodyText: string) => {
+    if (!accessToken) throw new Error("Google account is not connected.");
+
+    const str = [
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/plain; charset="UTF-8"`,
+      `Content-Transfer-Encoding: 7bit`,
+      ``,
+      bodyText
+    ].join('\r\n');
+
+    const raw = btoa(unescape(encodeURIComponent(str)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+    }
+  }, [accessToken]);
+
   // Automatically scan emails when token is available
   useEffect(() => {
     if (accessToken) {
@@ -149,7 +213,7 @@ export const GmailProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [accessToken, scanEmails]);
 
   return (
-    <GmailContext.Provider value={{ emails, isLoading, error: authError || error, scanEmails }}>
+    <GmailContext.Provider value={{ emails, isLoading, error: authError || error, scanEmails, sendEmail }}>
       {children}
     </GmailContext.Provider>
   );

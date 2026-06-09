@@ -47,6 +47,7 @@ async function initDb() {
         source         VARCHAR(50) DEFAULT 'manual', -- 'manual' | 'google' | 'email' | 'agent'
         status         VARCHAR(20) DEFAULT 'scheduled',
                                              -- 'scheduled' | 'ongoing' | 'done' | 'cancelled'
+        attendees      TEXT[],
         created_at     TIMESTAMPTZ DEFAULT NOW(),
         updated_at     TIMESTAMPTZ DEFAULT NOW(),
         CONSTRAINT chk_meeting_time CHECK (end_time > start_time)
@@ -63,6 +64,7 @@ async function initDb() {
         ADD COLUMN IF NOT EXISTS color_id      VARCHAR(10),
         ADD COLUMN IF NOT EXISTS source        VARCHAR(50) DEFAULT 'manual',
         ADD COLUMN IF NOT EXISTS status        VARCHAR(20) DEFAULT 'scheduled',
+        ADD COLUMN IF NOT EXISTS attendees     TEXT[],
         ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMPTZ DEFAULT NOW();
         
       ALTER TABLE ${schemaName}.meetings
@@ -219,23 +221,60 @@ async function initDb() {
     `);
     console.log('✓ Table jobs');
 
-    // ── 10. Seed default user ─────────────────────────────────────────────
+    // ── 11. contacts (Address Book) ───────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${schemaName}.contacts (
+        id          SERIAL PRIMARY KEY,
+        user_id     INTEGER NOT NULL REFERENCES ${schemaName}.users(id) ON DELETE CASCADE,
+        name        VARCHAR(100) NOT NULL,
+        email       VARCHAR(255) NOT NULL,
+        designation VARCHAR(100),
+        department  VARCHAR(100),
+        created_at  TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT uq_user_contact UNIQUE (user_id, email)
+      )
+    `);
+    console.log('✓ Table contacts');
+
+    // ── 10. Seed default user & contacts ──────────────────────────────────
     const defaultEmail = 'principal@gmail.com';
     const existing = await client.query(
       `SELECT id FROM ${schemaName}.users WHERE username = $1`,
       [defaultEmail]
     );
+    let userId: number;
     if (existing.rows.length === 0) {
       const hashed = await bcrypt.hash('123456', 10);
-      await client.query(
+      const userInsert = await client.query(
         `INSERT INTO ${schemaName}.users (full_name, username, password)
-         VALUES ($1, $2, $3)`,
+         VALUES ($1, $2, $3) RETURNING id`,
         ['Principal User', defaultEmail, hashed]
       );
+      userId = userInsert.rows[0].id;
       console.log(`✓ Default user "${defaultEmail}" seeded (password: 123456)`);
     } else {
+      userId = existing.rows[0].id;
       console.log(`✓ Default user "${defaultEmail}" already exists`);
     }
+
+    // Seed mock contacts
+    const defaultContacts = [
+      { name: 'Dr. Ramesh Kumar', email: 'dean.academic@college.edu', designation: 'Dean', department: 'Academics' },
+      { name: 'Dr. Sunita Sharma', email: 'hod.cse@college.edu', designation: 'HOD', department: 'Computer Science' },
+      { name: 'Dr. Anil Verma', email: 'hod.ece@college.edu', designation: 'HOD', department: 'Electronics' },
+      { name: 'Dr. Priya Nair', email: 'hod.me@college.edu', designation: 'HOD', department: 'Mechanical' },
+      { name: 'Mr. Satish Reddy', email: 'registrar@college.edu', designation: 'Registrar', department: 'Administration' },
+    ];
+
+    for (const dc of defaultContacts) {
+      await client.query(
+        `INSERT INTO ${schemaName}.contacts (user_id, name, email, designation, department)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id, email) DO NOTHING`,
+        [userId, dc.name, dc.email, dc.designation, dc.department]
+      );
+    }
+    console.log('✓ Seeded default contacts for Address Book');
 
     console.log('\n🎉 Database initialization complete — all 9 tables ready.\n');
   } catch (error) {

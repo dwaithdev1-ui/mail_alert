@@ -13,7 +13,7 @@ router.post('/sync', async (req: AuthRequest, res: Response) => {
 
   try {
     const timeMin = new Date().toISOString();
-    const gRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&singleEvents=true&orderBy=startTime`, {
+    const gRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&singleEvents=true&orderBy=startTime&conferenceDataVersion=1`, {
       headers: { 'Authorization': `Bearer ${googleAccessToken}` }
     });
 
@@ -27,6 +27,16 @@ router.post('/sync', async (req: AuthRequest, res: Response) => {
 
     for (const item of items) {
       if (!item.start?.dateTime || !item.end?.dateTime) continue; // Skip all-day events for now
+
+      let location = item.location || null;
+      if (!location && item.conferenceData?.entryPoints) {
+        const videoEntryPoint = item.conferenceData.entryPoints.find(
+          (ep: any) => ep.entryPointType === 'video'
+        );
+        if (videoEntryPoint?.uri) {
+          location = videoEntryPoint.uri;
+        }
+      }
 
       await pool.query(
         `INSERT INTO ${schemaName}.meetings 
@@ -44,7 +54,7 @@ router.post('/sync', async (req: AuthRequest, res: Response) => {
           item.summary || 'Untitled Event',
           item.start.dateTime,
           item.end.dateTime,
-          item.location || null,
+          location,
           item.description || null,
           item.id
         ]

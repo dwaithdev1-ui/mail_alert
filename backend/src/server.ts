@@ -14,6 +14,7 @@ import agentRouter         from './routes/agent';
 import briefingRouter      from './routes/briefing';
 // Phase 4 routes
 import calendarSyncRouter  from './routes/calendarSync';
+import contactsRouter      from './routes/contacts';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,6 +32,7 @@ app.use('/api/agent',         agentRouter);
 app.use('/api/briefing',      briefingRouter);
 // ── Phase 4 API routes ───────────────────────────────────────────────────────
 app.use('/api/calendar',      calendarSyncRouter);
+app.use('/api/contacts',      contactsRouter);
 
 // ── Signup ────────────────────────────────────────────────────────────────────
 app.post('/api/auth/signup', async (req, res) => {

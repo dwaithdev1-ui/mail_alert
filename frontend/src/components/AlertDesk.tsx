@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Meeting, meetings } from '../data/meetings';
+import { type Meeting, meetings } from '../data/meetings';
 
 /**
  * AlertDesk – a glass‑styled desk that shows meetings occurring within the next 5 minutes.

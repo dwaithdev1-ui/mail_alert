@@ -26,6 +26,7 @@ export function useAgent() {
   const { accessToken: googleAccessToken } = useGoogleAuth();
 
   const sendMessage = useCallback(async (message: string) => {
+    if (state.isLoading) return;
     const token = localStorage.getItem('auth_token');
     if (!token) {
       setState(s => ({ ...s, error: 'Not authenticated' }));
@@ -63,7 +64,7 @@ export function useAgent() {
       setState(s => ({
         ...s,
         isLoading: false,
-        error: data.error || null,
+        error: null,   // reply already carries any agent-level error text
         history: data.history || [...s.history, { role: 'assistant', content: data.reply }],
         lastToolsUsed: data.toolsUsed || [],
       }));
@@ -75,7 +76,7 @@ export function useAgent() {
         history: [...s.history, { role: 'assistant', content: `Error: ${err.message}` }],
       }));
     }
-  }, [state.history, googleAccessToken]);
+  }, [state.history, state.isLoading, googleAccessToken]);
 
   const clearHistory = useCallback(() => {
     setState({ isLoading: false, error: null, history: [], lastToolsUsed: [] });

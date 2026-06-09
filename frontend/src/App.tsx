@@ -9,6 +9,7 @@ import { GmailProvider } from './context/GmailContext';
 import Sidebar from './components/Sidebar';
 import AlertPort from './components/AlertPort';
 import AgentChat from './components/AgentChat';
+import VoiceAssistant from './components/VoiceAssistant';
 import Dashboard from './pages/Dashboard';
 import LoginPage from './pages/LoginPage';
 import HelpDesk from './pages/HelpDesk';
@@ -16,11 +17,13 @@ import CalendarPage from './pages/CalendarPage';
 import SettingsPage from './pages/Settings';
 import MailScanner from './pages/MailScanner';
 import DepartmentView from './pages/DepartmentView';
+import AddressBook from './pages/AddressBook';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!localStorage.getItem('auth_token'));
+  const [isAgentOpen, setIsAgentOpen] = useState(false);
   const { accessToken: googleToken } = useGoogleAuth();
 
   // Automatic Calendar Sync when Google Token is available
@@ -57,14 +60,16 @@ function AppContent() {
       {isAuthenticated ? (
         <div className="app-layout">
           <AlertPort />
-          <AgentChat />
-          <Sidebar onLogout={handleLogout} />
+          <AgentChat isOpen={isAgentOpen} setIsOpen={setIsAgentOpen} />
+          <VoiceAssistant />
+          <Sidebar onLogout={handleLogout} isAgentOpen={isAgentOpen} onToggleAgent={() => setIsAgentOpen(!isAgentOpen)} />
           <main className="main-content animate-fade-in">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/mail" element={<MailScanner />} />
               <Route path="/departments" element={<DepartmentView />} />
+              <Route path="/contacts" element={<AddressBook />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/help" element={<HelpDesk />} />
               <Route path="*" element={<Navigate to="/" replace />} />

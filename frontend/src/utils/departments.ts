@@ -42,7 +42,7 @@ function capitalize(str: string) {
 /**
  * Automatically categorize an email into a department dynamically.
  */
-export function detectDepartment(sender: string, subject: string, snippet: string): string {
+export function detectDepartment(sender: string, subject: string, _snippet: string): string {
   // 1. Check for explicit tags in subject like [HR] or (Finance)
   const tagMatch = subject.match(/^\[(.*?)\]|^\((.*?)\)/);
   if (tagMatch) {

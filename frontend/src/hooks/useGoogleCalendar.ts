@@ -12,13 +12,22 @@ export { GC_COLORS };
 
 function mapGoogleEvent(item: any): CalendarEvent {
   const isAllDay = Boolean(item.start?.date && !item.start?.dateTime);
+  let location = item.location;
+  if (!location && item.conferenceData?.entryPoints) {
+    const videoEntryPoint = item.conferenceData.entryPoints.find(
+      (ep: any) => ep.entryPointType === 'video'
+    );
+    if (videoEntryPoint?.uri) {
+      location = videoEntryPoint.uri;
+    }
+  }
   return {
     id: item.id,
     title: item.summary || '(No title)',
     start: item.start?.dateTime ?? item.start?.date ?? '',
     end: item.end?.dateTime ?? item.end?.date ?? '',
     description: item.description,
-    location: item.location,
+    location,
     htmlLink: item.htmlLink,
     colorId: item.colorId,
     isAllDay,
@@ -32,6 +41,22 @@ export interface UseGoogleCalendarReturn {
   events: CalendarEvent[];
   error: string | null;
   refresh: () => void;
+  createEvent: (eventData: {
+    title: string;
+    start: string;
+    end: string;
+    location?: string;
+    description?: string;
+    attendees?: string[];
+    createMeet?: boolean;
+    sendUpdates?: 'all' | 'none';
+  }) => Promise<any>;
+  patchEvent: (eventId: string, eventData: {
+    description?: string;
+    location?: string;
+  }, sendUpdates?: 'all' | 'none') => Promise<any>;
+  deleteEvent: (eventId: string) => Promise<void>;
+  accessToken: string | null;
 }
 
 export function useGoogleCalendar(): UseGoogleCalendarReturn {
@@ -55,6 +80,7 @@ export function useGoogleCalendar(): UseGoogleCalendarReturn {
       url.searchParams.set('singleEvents', 'true');
       url.searchParams.set('orderBy', 'startTime');
       url.searchParams.set('maxResults', '100');
+      url.searchParams.set('conferenceDataVersion', '1');
 
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -75,6 +101,99 @@ export function useGoogleCalendar(): UseGoogleCalendarReturn {
     }
   }, [accessToken]);
 
+  const createEvent = useCallback(async (eventData: {
+    title: string;
+    start: string;
+    end: string;
+    location?: string;
+    description?: string;
+    attendees?: string[];
+    createMeet?: boolean;
+    sendUpdates?: 'all' | 'none';
+  }) => {
+    if (!accessToken) return null;
+    const sendUpdatesVal = eventData.sendUpdates ?? 'all';
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=${sendUpdatesVal}${eventData.createMeet ? '&conferenceDataVersion=1' : ''}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: eventData.title,
+        start: { dateTime: eventData.start },
+        end: { dateTime: eventData.end },
+        location: eventData.location || undefined,
+        description: eventData.description || undefined,
+        attendees: eventData.attendees?.map(email => ({ email })) || undefined,
+        conferenceData: eventData.createMeet ? {
+          createRequest: {
+            requestId: Math.random().toString(36).substring(2, 15),
+            conferenceSolutionKey: {
+              type: 'hangoutsMeet'
+            }
+          }
+        } : undefined
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    await fetchEvents();
+    return data;
+  }, [accessToken, fetchEvents]);
+
+  const patchEvent = useCallback(async (eventId: string, eventData: {
+    description?: string;
+    location?: string;
+  }, sendUpdates: 'all' | 'none' = 'all') => {
+    if (!accessToken) return null;
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}?sendUpdates=${sendUpdates}`;
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        description: eventData.description || undefined,
+        location: eventData.location || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    await fetchEvents();
+    return data;
+  }, [accessToken, fetchEvents]);
+
+  const deleteEvent = useCallback(async (eventId: string) => {
+    if (!accessToken) return;
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+    }
+
+    await fetchEvents();
+  }, [accessToken, fetchEvents]);
+
   // Auto fetch when token is ready
   useEffect(() => {
     if (accessToken) {
@@ -89,6 +208,10 @@ export function useGoogleCalendar(): UseGoogleCalendarReturn {
     isLoading, 
     events, 
     error: authError || error, 
-    refresh: fetchEvents 
+    refresh: fetchEvents,
+    createEvent,
+    patchEvent,
+    deleteEvent,
+    accessToken
   };
 }

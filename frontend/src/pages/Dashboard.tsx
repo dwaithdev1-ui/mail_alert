@@ -4,7 +4,6 @@ import { useCalendarContext } from '../context/CalendarContext';
 import { useGoogleAuth } from '../context/GoogleAuthContext';
 import { useGmailContext } from '../context/GmailContext';
 import type { CalendarEvent } from '../types/calendar';
-import { useNavigate } from 'react-router-dom';
 
 /* ── Meeting status logic ───────────────────────────────────────────────── */
 const getStatus = (event: CalendarEvent): MeetingStatus => {
@@ -106,7 +105,6 @@ const Dashboard: React.FC = () => {
   const { events, isLoading: calLoading } = useCalendarContext();
   const { emails, isLoading: gmailLoading } = useGmailContext();
   const { isConnected, isLoading: authLoading, connect, disconnect } = useGoogleAuth();
-  const navigate = useNavigate();
 
   const isLoading = calLoading || authLoading || gmailLoading;
 
