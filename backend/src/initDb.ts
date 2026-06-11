@@ -236,6 +236,47 @@ async function initDb() {
     `);
     console.log('✓ Table contacts');
 
+// ── 12. tickets (Help Desk) ───────────────────────────────────────
+await client.query(`
+  CREATE TABLE IF NOT EXISTS ${schemaName}.tickets (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    status VARCHAR(20) DEFAULT 'open',
+    priority VARCHAR(20) DEFAULT 'medium',
+    created_by INTEGER NOT NULL REFERENCES ${schemaName}.users(id) ON DELETE SET NULL,
+    assigned_to INTEGER REFERENCES ${schemaName}.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+`);
+console.log('✓ Table tickets');
+
+// ── 13. ticket_attachments ───────────────────────────────────────
+await client.query(`
+  CREATE TABLE IF NOT EXISTS ${schemaName}.ticket_attachments (
+    id SERIAL PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES ${schemaName}.tickets(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    filepath TEXT NOT NULL,
+    uploaded_at TIMESTAMPTZ DEFAULT NOW()
+  );
+`);
+console.log('✓ Table ticket_attachments');
+
+// ── 14. ticket_audit ───────────────────────────────────────
+await client.query(`
+  CREATE TABLE IF NOT EXISTS ${schemaName}.ticket_audit (
+    id SERIAL PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES ${schemaName}.tickets(id) ON DELETE CASCADE,
+    action VARCHAR(20) NOT NULL,
+    actor_user_id INTEGER REFERENCES ${schemaName}.users(id) ON DELETE SET NULL,
+    detail JSONB,
+    changed_at TIMESTAMPTZ DEFAULT NOW()
+  );
+`);
+console.log('✓ Table ticket_audit');
+
     // ── 10. Seed default user & contacts ──────────────────────────────────
     const defaultEmail = 'principal@gmail.com';
     const existing = await client.query(

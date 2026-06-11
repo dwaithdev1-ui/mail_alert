@@ -30,7 +30,7 @@ function AppContent() {
   useEffect(() => {
     if (isAuthenticated && googleToken) {
       const token = localStorage.getItem('auth_token');
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/calendar/sync`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/calendar/sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useGoogleAuth } from '../context/GoogleAuthContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';

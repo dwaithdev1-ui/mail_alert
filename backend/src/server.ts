@@ -4,20 +4,22 @@ import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import pool, { schemaName } from './db';
 
-// Phase 1 routes
+// Phase 1 routes - reloaded for env 
 import meetingsRouter      from './routes/meetings';
 import alertsRouter        from './routes/alerts';
 import notificationsRouter from './routes/notifications';
 import conflictsRouter     from './routes/conflicts';
+import contactsRouter      from './routes/contacts';
+import ticketsRouter       from './routes/tickets';
 // Phase 2 routes
 import agentRouter         from './routes/agent';
 import briefingRouter      from './routes/briefing';
 // Phase 4 routes
 import calendarSyncRouter  from './routes/calendarSync';
-import contactsRouter      from './routes/contacts';
+import ticketsRouter from './routes/tickets';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
@@ -32,7 +34,7 @@ app.use('/api/agent',         agentRouter);
 app.use('/api/briefing',      briefingRouter);
 // ── Phase 4 API routes ───────────────────────────────────────────────────────
 app.use('/api/calendar',      calendarSyncRouter);
-app.use('/api/contacts',      contactsRouter);
+app.use('/api/tickets', ticketsRouter);
 
 // ── Signup ────────────────────────────────────────────────────────────────────
 app.post('/api/auth/signup', async (req, res) => {

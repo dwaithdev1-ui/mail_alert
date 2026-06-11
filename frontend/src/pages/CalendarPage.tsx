@@ -169,7 +169,7 @@ const DayDetailModal: React.FC<{
     const fetchContacts = async () => {
       try {
         const token = localStorage.getItem('auth_token');
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/contacts`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/contacts`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -267,7 +267,7 @@ const DayDetailModal: React.FC<{
 
       if (isConnected) {
         try {
-          const draftRes = await fetch('http://localhost:5000/api/agent/draft-email', {
+          const draftRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/agent/draft-email`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

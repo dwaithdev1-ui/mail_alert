@@ -23,7 +23,7 @@ const AddressBook: React.FC = () => {
   const [department, setDepartment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
   const fetchContacts = async () => {
     setIsLoading(true);

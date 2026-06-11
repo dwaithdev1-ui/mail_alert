@@ -47,7 +47,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const googleAccessToken = calendarState.accessToken;
     if (token && googleAccessToken) {
       try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/calendar/sync`, {
+        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/calendar/sync`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
