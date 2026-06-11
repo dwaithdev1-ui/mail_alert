@@ -112,7 +112,11 @@ const SettingsPage: React.FC = () => {
       if (!isGoogleUser) body.username = accUsername.trim();
       if (accPassword) body.password = accPassword;
 
+<<<<<<< HEAD
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/user/update`, {
+=======
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/update`, {
+>>>>>>> a63e45564e663a4d9de5ef54772f69139ea93e1c
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

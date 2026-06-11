@@ -267,7 +267,11 @@ const DayDetailModal: React.FC<{
 
       if (isConnected) {
         try {
+<<<<<<< HEAD
           const draftRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/agent/draft-email`, {
+=======
+          const draftRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/agent/draft-email`, {
+>>>>>>> a63e45564e663a4d9de5ef54772f69139ea93e1c
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -28,7 +28,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           return;
         }
 
+<<<<<<< HEAD
         const response = await fetch(`${API_BASE}/api/auth/signup`, {
+=======
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/signup`, {
+>>>>>>> a63e45564e663a4d9de5ef54772f69139ea93e1c
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -62,7 +66,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           return;
         }
 
+<<<<<<< HEAD
         const response = await fetch(`${API_BASE}/api/auth/login`, {
+=======
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/login`, {
+>>>>>>> a63e45564e663a4d9de5ef54772f69139ea93e1c
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -104,7 +112,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       // Register / find this Google user in our own DB so they get a real userId,
       // can set a site password, and have an editable profile.
+<<<<<<< HEAD
       const response = await fetch(`${API_BASE}/api/auth/google`, {
+=======
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`, {
+>>>>>>> a63e45564e663a4d9de5ef54772f69139ea93e1c
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: payload.email, name: payload.name }),

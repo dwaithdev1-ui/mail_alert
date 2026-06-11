@@ -41,6 +41,7 @@ const cors_1 = __importDefault(require("cors"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = require("crypto");
 const db_1 = __importStar(require("./db"));
+const checkMeetings_1 = require("./checkMeetings");
 // Phase 1 routes
 const meetings_1 = __importDefault(require("./routes/meetings"));
 const alerts_1 = __importDefault(require("./routes/alerts"));
@@ -51,6 +52,7 @@ const agent_1 = __importDefault(require("./routes/agent"));
 const briefing_1 = __importDefault(require("./routes/briefing"));
 // Phase 4 routes
 const calendarSync_1 = __importDefault(require("./routes/calendarSync"));
+const contacts_1 = __importDefault(require("./routes/contacts"));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
 app.use((0, cors_1.default)());
@@ -65,6 +67,7 @@ app.use('/api/agent', agent_1.default);
 app.use('/api/briefing', briefing_1.default);
 // ── Phase 4 API routes ───────────────────────────────────────────────────────
 app.use('/api/calendar', calendarSync_1.default);
+app.use('/api/contacts', contacts_1.default);
 // ── Signup ────────────────────────────────────────────────────────────────────
 app.post('/api/auth/signup', async (req, res) => {
     const { fullName, username, password } = req.body;
@@ -213,4 +216,5 @@ app.get('/api/health', (req, res) => {
 });
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
+    (0, checkMeetings_1.startMeetingAlertScanner)();
 });

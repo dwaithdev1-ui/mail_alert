@@ -3,6 +3,7 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import pool, { schemaName } from './db';
+import { startMeetingAlertScanner } from './checkMeetings';
 
 // Phase 1 routes - reloaded for env 
 import meetingsRouter      from './routes/meetings';
@@ -235,4 +236,5 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  startMeetingAlertScanner();
 });
