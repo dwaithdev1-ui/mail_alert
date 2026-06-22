@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: mail-alert-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: DB_HOST
+        sync: false
+        placeholder: "dbdev.cjuawimc6r6b.eu-north-1.rds.amazonaws.com"
+      - key: DB_PORT
+        value: 5432
+      - key: DB_NAME
+        sync: false
+        placeholder: "mail_alert"
+      - key: DB_USER
+        sync: false
+        placeholder: "postgresdev"
+      - key: DB_PASSWORD
+        sync: false
+        placeholder: "Admindev"
+      - key: DB_SCHEMA
+        value: personal_agent
+      - key: GROQ_API_KEY
+        sync: false
+        placeholder: "Enter your Groq API Key"
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
